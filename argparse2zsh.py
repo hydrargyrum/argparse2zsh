@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: WTFPL
 
 import argparse
+import re
 import shlex
 
 # TODO implement subparsers
@@ -30,6 +31,20 @@ def is_positional(action):
 	return not action.option_strings
 
 
+def quote_optspec(s, spaces=False, square=True, parens=True, colon=True):
+	# result = re.sub(r"([][\\:()])", r"\\\1", s)
+	result = s.replace("\\", r"\\")
+	if parens:
+		result = re.sub(r"([()])", r"\\\1", result)
+	if square:
+		result = re.sub(r"([][])", r"\\\1", result)
+	if spaces:
+		result = result.replace(" ", r"\ ")
+	if colon:
+		result = result.replace(":", r"\:")
+	return result
+
+
 def build_option_string(action):
 	# result is in the form ["-f:message:action", "--foo:message:action"]
 	# `parts` is the ["-f:", "--foo:"] part
@@ -38,7 +53,7 @@ def build_option_string(action):
 	suffix = []
 
 	for option in action.option_strings:
-		parts.append(option)
+		parts.append(quote_optspec(option))
 
 		if expect_arg(action):
 			if option.startswith("--"):
@@ -47,7 +62,7 @@ def build_option_string(action):
 				parts[-1] += "+"
 
 		if action.help:
-			parts[-1] += f"[{action.help}]"
+			parts[-1] += f"[{quote_optspec(action.help)}]"
 
 		if expect_arg(action):
 			parts[-1] += ":"
@@ -74,14 +89,19 @@ def build_option_string(action):
 
 	if expect_arg(action):
 		if not action.option_strings and action.help:
-			suffix.append(action.help)
+			suffix.append(quote_optspec(action.help))
 		else:
-			suffix.append(action.metavar or action.dest.upper() or " ")
+			suffix.append(quote_optspec(action.metavar or action.dest.upper() or " "))
 
 		is_action_type_class = isinstance(action.type, type)
 
 		if action.choices:
-			suffix.append(":(%s)" % ' '.join(action.choices))  # FIXME escape chars
+			suffix.append(
+				":(%s)" % ' '.join(
+					quote_optspec(choice, spaces=True)
+					for choice in action.choices
+				)
+			)
 		elif action.type is int:
 			suffix.append(":_numbers")
 		elif is_action_type_class and issubclass(action.type, argparse.FileType):
