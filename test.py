@@ -45,3 +45,10 @@ def test_choices():
 	parser.add_argument("--foo", choices=["BAR", "BAZ", "(QUOTE ME)"])
 
 	assert convert(parser, wrap=False) == r"_arguments -s -S '--foo=:FOO:(BAR BAZ \(QUOTE\ ME\))'"
+
+
+def test_exclude_aliases():
+	parser = ArgumentParser(add_help=False)
+	parser.add_argument("-f", "--foo", action="store_true")
+
+	assert convert(parser, wrap=False) == r"_arguments -s -S '(-f --foo)-f' '(-f --foo)--foo'"

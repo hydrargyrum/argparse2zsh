@@ -6,6 +6,7 @@ import re
 import shlex
 
 # TODO implement subparsers
+# TODO implement exclusive groups
 
 
 r"""
@@ -72,6 +73,13 @@ def build_option_string(action):
 			(argparse._AppendAction, argparse._AppendConstAction)
 		):
 			parts[-1] = f"*{parts[-1]}"
+		elif len(action.option_strings) > 1:
+			# exclude future aliases of the same action
+			all_options = [
+				quote_optspec(option)
+				for option in action.option_strings
+			]
+			parts[-1] = f"({' '.join(all_options)}){parts[-1]}"
 
 	if not action.option_strings:
 		if action.nargs is None:
