@@ -72,22 +72,27 @@ def build_option_string(action):
 			raise NotImplementedError(f"unhandled nargs: {action.nargs}")
 
 	if expect_arg(action):
-		# not sure what "message"'s purpose is, so we always leave it blank
+		if action.help and not action.option_strings:
+			suffix.append(action.help)
+		else:
+			# --options already have "[explanation]" so no need for ":message:"
+			suffix.append(" ")
+
 		is_action_type_class = isinstance(action.type, type)
 
 		if action.choices:
-			suffix.append(" :(%s)" % ' '.join(action.choices))  # FIXME escape chars
+			suffix.append(":(%s)" % ' '.join(action.choices))  # FIXME escape chars
 		elif action.type is int:
-			suffix.append(" :_numbers")
+			suffix.append(":_numbers")
 		elif is_action_type_class and issubclass(action.type, argparse.FileType):
-			suffix.append(" :_files")
+			suffix.append(":_files")
 		elif action.dest and "file" in action.dest:
 			# just guessing, argparse.FileType is only seldom used
-			suffix.append(" :_files")
+			suffix.append(":_files")
 		elif action.type:
-			suffix.append(f" :{action.type.__name__}")
+			suffix.append(f":{action.type.__name__}")
 		else:
-			suffix.append(" :")
+			suffix.append(":")
 
 	return [part + "".join(suffix) for part in parts]
 
