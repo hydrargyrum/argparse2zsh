@@ -44,6 +44,11 @@ def build_option_string(action):
 				parts[-1] += "="
 			elif option.startswith("-"):
 				parts[-1] += "+"
+
+		if action.help:
+			parts[-1] += f"[{action.help}]"
+
+		if expect_arg(action):
 			parts[-1] += ":"
 
 	if not action.option_strings:
@@ -59,9 +64,6 @@ def build_option_string(action):
 			parts.extend(":" for _ in range(action.nargs))
 		else:
 			raise NotImplementedError(f"unhandled nargs: {action.nargs}")
-
-	if action.help:
-		suffix.append(f"[{action.help}]")
 
 	if expect_arg(action):
 		# not sure what "message"'s purpose is, so we always leave it blank
