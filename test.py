@@ -12,7 +12,7 @@ def test_long():
 	parser.add_argument("--bar", help="the bar help")
 	parser.add_argument("--bool", help="bool flag", action="store_true")
 
-	assert convert(parser, wrap=False) == "_arguments -s -S '--foo=: :' '--bar=[the bar help]: :' '--bool[bool flag]'"
+	assert convert(parser, wrap=False) == "_arguments -s -S --foo=:FOO: '--bar=[the bar help]:BAR:' '--bool[bool flag]'"
 
 
 def test_short():
@@ -21,14 +21,14 @@ def test_short():
 	parser.add_argument("-b", help="the B help")
 	parser.add_argument("-a", action="store_true", help="bool flag")
 
-	assert convert(parser, wrap=False) == "_arguments -s -S '-f+: :' '-b+[the B help]: :' '-a[bool flag]'"
+	assert convert(parser, wrap=False) == "_arguments -s -S -f+:F: '-b+[the B help]:B:' '-a[bool flag]'"
 
 
 def test_repeat():
 	parser = ArgumentParser(add_help=False)
-	parser.add_argument("-f", action="append")
+	parser.add_argument("--foo", action="append")
 
-	assert convert(parser, wrap=False) == "_arguments -s -S '*-f+: :'"
+	assert convert(parser, wrap=False) == "_arguments -s -S '*--foo=:FOO:'"
 
 
 def test_positional():
@@ -41,6 +41,6 @@ def test_positional():
 
 def test_choices():
 	parser = ArgumentParser(add_help=False)
-	parser.add_argument("--foo", choices=["FOO", "BAR"])
+	parser.add_argument("--foo", choices=["BAR", "BAZ"])
 
-	assert convert(parser, wrap=False) == "_arguments -s -S '--foo=: :(FOO BAR)'"
+	assert convert(parser, wrap=False) == "_arguments -s -S '--foo=:FOO:(BAR BAZ)'"

@@ -73,11 +73,10 @@ def build_option_string(action):
 			raise NotImplementedError(f"unhandled nargs: {action.nargs}")
 
 	if expect_arg(action):
-		if action.help and not action.option_strings:
+		if not action.option_strings and action.help:
 			suffix.append(action.help)
 		else:
-			# --options already have "[explanation]" so no need for ":message:"
-			suffix.append(" ")
+			suffix.append(action.metavar or action.dest.upper() or " ")
 
 		is_action_type_class = isinstance(action.type, type)
 
