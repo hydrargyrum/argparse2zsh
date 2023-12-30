@@ -86,9 +86,12 @@ def build_option_string(action):
 	return [part + "".join(suffix) for part in parts]
 
 
-def convert(parser, wrap=True):
+def convert(parser, wrap=True, ignored=None):
 	parts = ["_arguments", "-s", "-S"]
 	for action in sorted(parser._actions, key=is_positional):
+		if action is ignored:
+			continue
+
 		parts.extend(build_option_string(action))
 
 	parts = [shlex.quote(part) for part in parts]
@@ -99,18 +102,22 @@ def convert(parser, wrap=True):
 
 class ZshCompletionAction(argparse.Action):
 	def __init__(self, option_strings, dest, **kwargs):
+		self._ignore_self = kwargs.pop("ignore_self", False)
 		super().__init__(option_strings, dest=argparse.SUPPRESS, nargs=0)
 
 	def __call__(self, parser, namespace, values, option_string=None):
 		print(f"#compdef {parser.prog}")
-		print(convert(parser))
+		print(convert(parser, ignored=self))
 		parser.exit()
 
 
 def monkeypatch():
 	# force every ArgumentParser.parse_args to have --zsh-completion
 	def new_parse_args(self, *args, **kwargs):
-		self.add_argument("--zsh-completion", action=ZshCompletionAction)
+		self.add_argument(
+			"--zsh-completion", action=ZshCompletionAction,
+			ignore_self=True,
+		)
 		return old_parse_args(self, *args, **kwargs)
 
 	old_parse_args = argparse.ArgumentParser.parse_args
