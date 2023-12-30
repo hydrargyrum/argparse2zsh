@@ -51,6 +51,12 @@ def build_option_string(action):
 		if expect_arg(action):
 			parts[-1] += ":"
 
+		if isinstance(
+			action,
+			(argparse._AppendAction, argparse._AppendConstAction)
+		):
+			parts[-1] = f"*{parts[-1]}"
+
 	if not action.option_strings:
 		if action.nargs is None:
 			parts.append(":")
