@@ -117,6 +117,8 @@ def build_option_string(action):
 		elif action.dest and "file" in action.dest:
 			# just guessing, argparse.FileType is only seldom used
 			suffix.append(":_files")
+		elif action.dest and "dir" in action.dest:
+			suffix.append(":_files -/")
 		elif action.type:
 			suffix.append(f":{action.type.__name__}")
 		else:
