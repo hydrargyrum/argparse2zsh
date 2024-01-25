@@ -32,6 +32,13 @@ def is_positional(action):
 	return not action.option_strings
 
 
+def destmeta_matches(action, s):
+	return (
+		(action.dest and s in action.dest)
+		or (action.metavar and s in action.metavar.lower())
+	)
+
+
 def quote_optspec(s, spaces=False, square=True, parens=True, colon=True):
 	# result = re.sub(r"([][\\:()])", r"\\\1", s)
 	result = s.replace("\\", r"\\")
@@ -114,10 +121,10 @@ def build_option_string(action):
 			suffix.append(":_numbers")
 		elif is_action_type_class and issubclass(action.type, argparse.FileType):
 			suffix.append(":_files")
-		elif action.dest and "file" in action.dest:
+		elif destmeta_matches(action, "file"):
 			# just guessing, argparse.FileType is only seldom used
 			suffix.append(":_files")
-		elif action.dest and "dir" in action.dest:
+		elif destmeta_matches(action, "dir"):
 			suffix.append(":_files -/")
 		elif action.type:
 			suffix.append(f":{action.type.__name__}")
