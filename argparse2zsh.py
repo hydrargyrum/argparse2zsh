@@ -8,31 +8,25 @@ import shlex
 # TODO implement subparsers
 # TODO implement exclusive groups
 
-
-r"""
-OPT[DESCRIPTION]:MESSAGE:ACTION
-
-(ITEM1 ITEM2)
-((ITEM1\:’DESC1’ ITEM2\:’DESC2’))
-FUNCTION	Name of a function to call for generating matches or performing some other action, e.g. _files or _message
-{EVAL-STRING}	Evaluate string as shell code to generate matches. This can be used to call a utility function with arguments, e.g. _values or _describe
-->STRING	Set $state to STRING and continue ($state can be checked in a case statement after the utility function call)
-
-"""
+# argparse has:
+# - options (often optional) which are named: "my-command --foo --bar"
+# - positional arguments, which are unnamed: "my-command foo bar"
 
 
 def expect_arg(action):
+	"""Return True if action requires at least 1 arg"""
 	if action.nargs == 0:
 		return False
 	return True
 
 
 def is_positional(action):
-	# "--foo" before "foo"
+	"""Return False for "--foo", True for "foo", for sorting"""
 	return not action.option_strings
 
 
 def destmeta_matches(action, s):
+	"""Return True if action.dest or action.metavar matches string"""
 	return (
 		(action.dest and s in action.dest)
 		or (action.metavar and s in action.metavar.lower())
@@ -40,7 +34,6 @@ def destmeta_matches(action, s):
 
 
 def quote_optspec(s, spaces=False, square=True, parens=True, colon=True):
-	# result = re.sub(r"([][\\:()])", r"\\\1", s)
 	result = s.replace("\\", r"\\")
 	if parens:
 		result = re.sub(r"([()])", r"\\\1", result)
@@ -61,12 +54,15 @@ def build_option_string(action):
 	suffix = []
 
 	for option in action.option_strings:
+		# all these options are aliases
 		parts.append(quote_optspec(option))
 
 		if expect_arg(action):
 			if option.startswith("--"):
+				# argparse accepts --foo=42 and --foo 42
 				parts[-1] += "="
 			elif option.startswith("-"):
+				# argparse accepts -f 42 and -f42
 				parts[-1] += "+"
 
 		if action.help:
@@ -79,8 +75,10 @@ def build_option_string(action):
 			action,
 			(argparse._AppendAction, argparse._AppendConstAction)
 		):
+			# tell zsh we can have more of the same argument
 			parts[-1] = f"*{parts[-1]}"
 		elif len(action.option_strings) > 1:
+			# cannot be repeated + option has different aliases?
 			# exclude future aliases of the same action
 			all_options = [
 				quote_optspec(option)
@@ -89,7 +87,9 @@ def build_option_string(action):
 			parts[-1] = f"({' '.join(all_options)}){parts[-1]}"
 
 	if not action.option_strings:
+		# the action is a positional argument
 		if action.nargs is None:
+			# by default, it expects an argument
 			parts.append(":")
 		elif action.nargs == "?":
 			parts.append("::")
@@ -135,6 +135,8 @@ def build_option_string(action):
 
 
 def convert(parser, wrap=True, ignored=None):
+	# -s does completion knowing -x -y is equivalent to -xy
+	# -S stops completion of options if "--" is encountered
 	parts = ["_arguments", "-s", "-S"]
 	for action in sorted(parser._actions, key=is_positional):
 		if action is ignored:
