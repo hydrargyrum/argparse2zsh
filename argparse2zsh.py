@@ -4,8 +4,8 @@
 import argparse
 import re
 import shlex
+import textwrap
 
-# TODO implement subparsers
 # TODO implement exclusive groups
 
 # argparse has:
@@ -139,20 +139,129 @@ def build_option_string(action):
 	return [part + "".join(suffix) for part in parts]
 
 
-def convert(parser, wrap=True, ignored=None):
-	# -s does completion knowing -x -y is equivalent to -xy
-	# -S stops completion of options if "--" is encountered
-	parts = ["_arguments", "-s", "-S"]
-	for action in sorted(parser._actions, key=is_positional):
-		if action is ignored:
-			continue
+def _cleanup_indented(s):
+	return textwrap.dedent(s).strip("\n")
 
-		parts.extend(build_option_string(action))
+# {{{
+# f-strings dumbly insert a string into another.
+# If the inserted string contains newlines, lines in will be inserted without
+# accounting for the indentation level of the "{}" placeholder.
 
-	parts = [shlex.quote(part) for part in parts]
-	if wrap:
-		return " \\\n\t".join(parts)
-	return " ".join(parts)
+STX = "\x02"
+ETX = "\x03"
+REINDENT_BLOCK_RE = re.compile(f"{STX}([^{ETX}]*){ETX}", flags=re.DOTALL)
+
+
+def _prepare_insert(s):
+	# delimit a block
+	return f"{STX}{s}{ETX}"
+
+
+def _replacement(match):
+	newline = match.string.rfind("\n", 0, match.start())
+	indentation = match.string[newline + 1:match.start()]
+	# match.string for example: "...\n    \x02foo\nbar\x03\n..."
+	# newline ----------------------^
+	# match.start() ----------------------^
+	# indentation ------------------> ^--^ 4 spaces
+	# in the end we want: "...\n    foo\n    bar\n..."
+	# fixed = re.sub("\n", f"\n{indentation}", match[1])
+	fixed = match[1].replace("\n", f"\n{indentation}")
+	return fixed
+
+
+def _reindent_inserted(s):
+	return REINDENT_BLOCK_RE.sub(_replacement, s)
+
+
+# }}}
+
+
+class Converter:
+	def __init__(self):
+		self.functions = {}
+
+	def convert_parser(self, parser, wrap=True, ignored=None, name=""):
+		if not name:
+			name = "_" + parser.prog
+
+		# -s does completion knowing -x -y is equivalent to -xy
+		# -S stops completion of options if "--" is encountered
+		zargs = ["_arguments", "-s", "-S", "-C"]
+		for action in sorted(parser._actions, key=is_positional):
+			if action is ignored:
+				continue
+
+			if parser._subparsers and action is parser._subparsers._group_actions[0]:
+				continue
+
+			zargs.extend(build_option_string(action))
+
+		if parser._subparsers:
+			self.convert_subparsers(parser, parent_name=name)
+			zargs.append("1: :->cmds")
+			zargs.append("*::arg:->args")
+
+		zargs_str = " ".join(shlex.quote(part) for part in zargs)
+
+		# body = " ".join(zargs) + "\n"
+
+		if parser._subparsers:
+			zvalues = ["_values", shlex.quote(f"{name} command")]
+			for subcommand, subparser in parser._subparsers._group_actions[0].choices.items():
+				zvalues.append(shlex.quote(f"{subcommand}[{subparser.description}]"))
+
+			zcommands = []
+			for subcommand in parser._subparsers._group_actions[0].choices:
+				zcommands.append(_cleanup_indented(f"""
+					{subcommand})
+						{name}_{subcommand} ;;
+				"""))
+			zcommands_str = "\n".join(zcommands)
+
+			body = _cleanup_indented(_reindent_inserted(f"""
+				local line state
+
+				{_prepare_insert(zargs_str)}
+
+				case "$state" in
+					cmds)
+						{_prepare_insert(' '.join(zvalues))}
+						;;
+					args)
+						case "$line[1]" in
+							{_prepare_insert(zcommands_str)}
+						esac
+						;;
+				esac
+			"""))
+
+		else:
+			body = zargs_str
+
+		self.functions[name] = body
+
+	def convert_subparsers(self, parser, parent_name):
+		for subcommand, subparser in parser._subparsers._group_actions[0].choices.items():
+			self.convert_parser(subparser, name=f"{parent_name}_{subcommand}")
+
+	def assemble(self, parser):
+		if len(self.functions) == 1:
+			return _cleanup_indented(f"""
+				#compdef {parser.prog}
+
+				{self.functions[f'_{parser.prog}']}
+			""")
+
+		parts = [f"#compdef _{parser.prog} {parser.prog}"]
+		for name, sub_body in self.functions.items():
+			body = _cleanup_indented(_reindent_inserted(f"""
+				{name or '_' + parser.prog} () {{
+					{_prepare_insert(sub_body)}
+				}}
+			"""))
+			parts.append(body)
+		return "\n\n".join(parts)
 
 
 class ZshCompletionAction(argparse.Action):
@@ -161,8 +270,9 @@ class ZshCompletionAction(argparse.Action):
 		super().__init__(option_strings, dest=argparse.SUPPRESS, nargs=0)
 
 	def __call__(self, parser, namespace, values, option_string=None):
-		print(f"#compdef {parser.prog}")
-		print(convert(parser, ignored=self))
+		cvt = Converter()
+		cvt.convert_parser(parser)
+		print(cvt.assemble(parser))
 		parser.exit()
 
 

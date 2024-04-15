@@ -63,6 +63,7 @@ It really runs it and tries to exit as soon as `argparse.parse_args` is run.
 This means the app will do everything before argument parsing, whatever it is.
 Fortunately, most apps often do argument parsing at the start of the app, and don't clobber any data before, or don't even try to read any configuration files before, so it's often not a problem.
 
-### subparsers are not handled yet
+## How it works
 
-But it will probably be implemented later.
+argparse2zsh monkeypatches `ArgumentParser.parse_args` to inject its own `argparse.Action`.
+In it, it will introspect the current parser being used to explore all options and convert them to zsh syntax.
