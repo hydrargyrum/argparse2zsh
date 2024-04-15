@@ -117,8 +117,13 @@ def build_option_string(action):
 					for choice in action.choices
 				)
 			)
-		elif action.type is int:
-			suffix.append(":_numbers")
+		elif action.type in (int, float):
+			numbers = ":_numbers"
+			if action.default:
+				numbers += f" -d {action.default}"
+			if action.type is float:
+				numbers += " -f"
+			suffix.append(numbers)
 		elif is_action_type_class and issubclass(action.type, argparse.FileType):
 			suffix.append(":_files")
 		elif destmeta_matches(action, "file"):
