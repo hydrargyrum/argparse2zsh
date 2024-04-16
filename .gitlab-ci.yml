@@ -1,0 +1,28 @@
+variables:
+    PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+    PYTHONDEVMODE: "1"
+
+cache:
+    paths:
+        - ".cache/pip"
+
+default:
+    image: "docker.io/python:3"
+
+check build:
+    stage: "test"
+    script:
+        - "pip install twine"
+        - "twine check dist/*"
+
+lint:
+    stage: "test"
+    script:
+        - "pip install flake8"
+        - "flake8 ."
+
+test:
+    stage: "test"
+    script:
+        - "pip install pytest"
+        - "pytest test*.py"

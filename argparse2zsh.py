@@ -147,6 +147,7 @@ def _cleanup_indented(s):
 # If the inserted string contains newlines, lines in will be inserted without
 # accounting for the indentation level of the "{}" placeholder.
 
+
 STX = "\x02"
 ETX = "\x03"
 REINDENT_BLOCK_RE = re.compile(f"{STX}([^{ETX}]*){ETX}", flags=re.DOTALL)
