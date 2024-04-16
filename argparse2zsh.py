@@ -279,15 +279,15 @@ class ZshCompletionAction(argparse.Action):
 
 def monkeypatch():
 	# force every ArgumentParser.parse_args to have --zsh-completion
-	def new_parse_args(self, *args, **kwargs):
+	def new_parse_known_args(self, *args, **kwargs):
 		self.add_argument(
 			"--zsh-completion", action=ZshCompletionAction,
 			ignore_self=True,
 		)
-		return old_parse_args(self, *args, **kwargs)
+		return old_parse_known_args(self, *args, **kwargs)
 
-	old_parse_args = argparse.ArgumentParser.parse_args
-	argparse.ArgumentParser.parse_args = new_parse_args
+	old_parse_known_args = argparse.ArgumentParser.parse_known_args
+	argparse.ArgumentParser.parse_known_args = new_parse_known_args
 
 
 if __name__ == "__main__":
