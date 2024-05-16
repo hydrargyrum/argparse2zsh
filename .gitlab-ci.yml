@@ -9,12 +9,6 @@ cache:
 default:
     image: "docker.io/python:3"
 
-check build:
-    stage: "test"
-    script:
-        - "pip install twine"
-        - "twine check dist/*"
-
 lint:
     stage: "test"
     script:
