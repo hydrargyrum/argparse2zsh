@@ -19,4 +19,4 @@ test:
     stage: "test"
     script:
         - "pip install pytest"
-        - "pytest tests"
+        - "PYTHONPATH=. pytest tests"
