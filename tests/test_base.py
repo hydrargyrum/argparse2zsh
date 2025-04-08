@@ -132,7 +132,7 @@ def test_subparser():
 	""").strip()
 
 
-def test_rebuild():
+def test_reindent():
 	inserted = "this\nis\nindented\n\tmore"
 	s = _reindent_inserted(f"""
 		start
